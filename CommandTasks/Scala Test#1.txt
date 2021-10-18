@@ -1,0 +1,49 @@
+  
+case class WalkingState(walkingId: UUID, ownerId: UUID, dogId: UUID, address: Address,
+                        deliveredBy: DeliveredBy, walkingType: ServiceType, status: OrderStatus,
+                        duration: Int, note: Option[String], doorKeeperPhone: Option[String], walks: Seq[Walk],
+                        operationalNote: Option[String])
+
+case class Walk(walkId: UUID, walkerId: Option[UUID], paymentId: Option[UUID], // case class provides default HashMap and understandable variable names
+                status: WalkStatus, startTime: Option[DateTime], endTime: Option[DateTime],
+                checkinTime: Option[DateTime], checkoutTime: Option[DateTime], confirmTime: Option[DateTime],
+                heat: Option[Heat], ratingByOwner: Option[WalkRating], ratingByWalker: Option[WalkRating],
+                cancelledBy: Option[UserType], distance: Option[Double], paths: Seq[Geo], pins: Seq[WalkingPin],
+                ownerFeedback: Option[OwnerFeedBack], walkerFeedback: Option[WalkerFeedBack], cancelReason: Option[String])
+
+
+object WalkStatus extends Enumeration {// Enumarate the WalkStatus objeckt, begins in 0
+  type WalkStatus = Value
+  val Matched, Unmatched, Confirmed, Started, Finished, Cancelled, Halted = Value
+//	0	  1		2      3 	4  	  5	     6
+  implicit val format: Format[WalkStatus] = JsonFormats.enumFormat(this) //It saves to JSON file based on WalkStatus value (like system log file)
+}
+
+object OrderStatus extends Enumeration {// One more Enum for OrderStatus values
+  type OrderStatus = Value
+  val Requested, Started, Finished, Cancelled, Halted = Value
+//	0 	   1	     2		3	 4
+  implicit val format: Format[OrderStatus] = JsonFormats.enumFormat(this) //It saves to JSON file based on OrderStatus value
+}
+
+//This function is used to cancel the walk event.
+  private def onEventWalkCancelled(walkId: UUID, cancelledBy: UserType, cancelReason: Option[String], state: Option[WalkingState]): Option[WalkingState] = {//Function takes walk id, cancellation reason, walk status as parameters
+    val walkingState: WalkingState = state.get //Gets the state from the private state variable (most likely in the database) and updates the WalkingState variable
+    val walk: Option[Walk] = walkingState.walks.find(_.walkId == walkId)// Matching id's (parameters between in the database) for authentication against a possible error.
+    val updatedWalk: Walk = walk.get.copy(status = WalkStatus.Cancelled, cancelledBy = Some(cancelledBy), cancelReason = cancelReason) //updatedWalk value takes over the generated cancellation code (codes start with 5 bc Cancelled numaration is 5)
+    val updatedWalks: Seq[Walk] = walkingState.walks.filterNot(_.walkId == walkId) :+ updatedWalk // update walks situation in database
+
+    val allWalksHalted: Seq[Walk] = updatedWalks.filterNot(walk => walk.status == WalkStatus.Cancelled) // Checking if everything about the Walk event has been stopped
+    val newStatus: OrderStatus.Value = if (allWalksHalted.isEmpty) { // if everything is Complete
+      OrderStatus.Cancelled // OrderStatus Value set for save json file
+    } else if (allWalksHalted.forall(walk => walk.status == WalkStatus.Halted || walk.status == WalkStatus.Finished)) {// If the walking condition is over or stopped
+      OrderStatus.Finished // Order Finished
+    } else {// In everything else
+      OrderStatus.Started
+    }
+
+    Some(walkingState.copy(status = newStatus, walks = updatedWalks))
+  }
+
+
+//Note:I don't know scala well, Looks like similar to Java I tried to guess from the code. I'm sorry there might be mistakes. I will try to learn better.Thanks.
