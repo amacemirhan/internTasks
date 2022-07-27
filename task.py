@@ -7,12 +7,12 @@ todo = {
   "email": "admin",
   "password": "admin"
 }
-r=requests.post("http://37.148.212.112:8080/api/internal/login",json=todo)
+r=requests.post("http://{ip:port}/api/internal/login",json=todo)
 token=r.json()['jwt']
 myDict = {
 
 }
-appData=requests.get("http://37.148.212.112:8080/api/devices?limit=15&applicationID=13",headers={"Grpc-Metadata-Authorization":token})
+appData=requests.get("http://{ip:port}/api/devices?limit=15&applicationID=13",headers={"Grpc-Metadata-Authorization":token})
 for i in range(int(appData.json()['totalCount'])):
    myDict[appData.json()['result'][i]['name']] = appData.json()['result'][i]['lastSeenAt']
 for key in myDict:
