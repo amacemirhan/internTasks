@@ -1,0 +1,3 @@
+Gelecek 30 gün için 7.59 kilogram sabun gerekecek.Günler ve yüzdelik sabun seviyelerini excel dosyasýnda bulabilirsiniz.
+ds sütunu o gün sabunluklarýn yüzdelik cinsinden gönderdikleri sabun miktarýnýn
+yüzde kaç olduðunu, kg sütunu ise kaç kilograma denk geldiði bilgisidir. 
